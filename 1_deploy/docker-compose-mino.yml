@@ -1,0 +1,31 @@
+name: ${COMPOSE_PROJECT_NAME:-nexgen}
+
+services:
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: ${MINIO_CONTAINER_NAME:-miniodb}
+    # The Chainguard image's entrypoint is /usr/bin/minio, so only the args go here.
+    command: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_BROWSER: ${MINIO_BROWSER:-on}
+      # Alias used by the healthcheck below (health endpoints need no credentials).
+      MC_HOST_local: http://localhost:9000
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: ${MINIO_HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${MINIO_HEALTHCHECK_TIMEOUT:-5s}
+      retries: ${MINIO_HEALTHCHECK_RETRIES:-5}
+      start_period: ${MINIO_HEALTHCHECK_START_PERIOD:-10s}
+    restart: ${MINIO_RESTART_POLICY:-unless-stopped}
+
+volumes:
+  minio-data:
+    name: ${MINIO_VOLUME_NAME:-minio-data}
